@@ -85,6 +85,7 @@ export default function Login() {
                     <FormControl>
                       <Input
                         {...field}
+                        type="email"
                         placeholder="example@mail.com"
                         required
                       />
