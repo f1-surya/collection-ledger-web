@@ -1,6 +1,6 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
-import { Link, useNavigate } from "react-router";
+import { Link, Navigate, useNavigate } from "react-router";
 import { toast } from "sonner";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
@@ -20,6 +20,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import useAuth from "@/hooks/auth";
 import api from "@/lib/api";
 
 const schema = z.object({
@@ -32,14 +33,21 @@ export default function Login() {
     resolver: zodResolver(schema),
   });
   const navigate = useNavigate();
+  const { isAuthenticated, login } = useAuth();
+
+  if (isAuthenticated) {
+    return <Navigate to={"/dashboard"} replace />;
+  }
 
   const handleSubmit = (values: z.infer<typeof schema>) => {
     api
       .post("/auth/login", values)
       .then((res) => {
         if (res.status === 200) {
-          sessionStorage.accessToken = res.data.accessToken;
-          sessionStorage.refreshToken = res.data.refreshToken;
+          login({
+            accessToken: res.data.accessToken,
+            refreshToken: res.data.refreshToken,
+          });
           navigate("/app");
         }
       })

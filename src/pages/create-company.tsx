@@ -1,7 +1,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
-import { Link, Navigate, useNavigate } from "react-router";
+import { useNavigate } from "react-router";
 import { toast } from "sonner";
 import z from "zod";
 import { Button } from "@/components/ui/button";
@@ -9,7 +9,6 @@ import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -22,62 +21,39 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import useAuth from "@/hooks/auth";
+import { Textarea } from "@/components/ui/textarea";
 import api from "@/lib/api";
 
-const signupSchema = z.object({
+const companySchema = z.object({
   name: z.string().min(3).trim(),
   email: z.email(),
-  password: z
-    .string()
-    .min(8, { message: "Password must be at least 8 characters." })
-    .regex(/[a-z]/, { message: "Password must contain a lowercase letter." })
-    .regex(/[A-Z]/, { message: "Password must contain an uppercase letter." })
-    .regex(/\d/, { message: "Password must contain a digit." })
-    .regex(/[^A-Za-z0-9]/, {
-      message: "Password must contain a special character.",
-    }),
-  passwordRepeat: z.string().min(8),
+  phone: z.string().trim(),
+  address: z.string().trim(),
 });
 
-export default function Signup() {
-  const form = useForm<z.infer<typeof signupSchema>>({
-    resolver: zodResolver(signupSchema),
-  });
+export default function CreateCompany() {
   const { t } = useTranslation();
+  const form = useForm<z.infer<typeof companySchema>>({
+    resolver: zodResolver(companySchema),
+  });
   const navigate = useNavigate();
-  const { isAuthenticated, login } = useAuth();
 
-  if (isAuthenticated) {
-    return <Navigate to="/create-company" replace />;
-  }
-
-  const handleSubmit = (values: z.infer<typeof signupSchema>) => {
-    if (values.passwordRepeat !== values.password) {
-      form.setError("passwordRepeat", { message: "Passwords do not match." });
-      return;
-    }
+  const handleSubmit = (values: z.infer<typeof companySchema>) => {
     api
-      .post("/auth/signup", values)
-      .then((res) => {
-        login({
-          accessToken: res.data.accessToken,
-          refreshToken: res.data.refreshToken,
-        });
-        navigate("/create-company");
+      .post("/company", values)
+      .then(() => {
+        navigate("/dashboard");
       })
       .catch((e) => {
-        const errorMessage = e.response.data.message as string;
-        if (errorMessage) {
-          const errorData = errorMessage.split(":");
-          form.setError(
+        const errorBody = e.response.data;
+        if (errorBody) {
+          const messageParts = (errorBody.message as string).split(":");
+          if (messageParts.length === 1) {
+            toast.error(messageParts[0]);
+          } else {
             // @ts-ignore
-            errorData[0],
-            { message: errorData[1] },
-            { shouldFocus: true },
-          );
-        } else {
-          toast.error(e.response.data.message);
+            form.setError(messageParts[0], { message: messageParts[1] });
+          }
         }
       });
   };
@@ -86,23 +62,28 @@ export default function Signup() {
     <main className="flex items-center justify-center h-dvh w-dvw">
       <Card className="md:w-[40%] m-2 text-center">
         <CardHeader>
-          <CardTitle className="text-xl">Collection ledger</CardTitle>
-          <CardDescription>{t("signupDescription")}</CardDescription>
+          <CardTitle className="text-xl">{t("almostDone")}</CardTitle>
+          <CardDescription>{t("companyDetails")}</CardDescription>
         </CardHeader>
         <CardContent>
           <Form {...form}>
             <form
-              onSubmit={form.handleSubmit(handleSubmit)}
               className="space-y-4 text-start"
+              onSubmit={form.handleSubmit(handleSubmit)}
             >
               <FormField
                 control={form.control}
                 name="name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Name*</FormLabel>
+                    <FormLabel>Company name*</FormLabel>
                     <FormControl>
-                      <Input {...field} placeholder="John Doe" required />
+                      <Input
+                        {...field}
+                        type="text"
+                        placeholder="Example ltd."
+                        required
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -128,15 +109,15 @@ export default function Signup() {
               />
               <FormField
                 control={form.control}
-                name="password"
+                name="phone"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Password*</FormLabel>
+                    <FormLabel>Phone number*</FormLabel>
                     <FormControl>
                       <Input
                         {...field}
-                        placeholder="MyStrongPassword"
-                        type="password"
+                        type="tel"
+                        placeholder="+91-9090304040"
                         required
                       />
                     </FormControl>
@@ -146,15 +127,14 @@ export default function Signup() {
               />
               <FormField
                 control={form.control}
-                name="passwordRepeat"
+                name="address"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Repeat password*</FormLabel>
+                    <FormLabel>Address*</FormLabel>
                     <FormControl>
-                      <Input
+                      <Textarea
                         {...field}
-                        placeholder="MyStrongPassword"
-                        type="password"
+                        placeholder="Some street, That city, 600600"
                         required
                       />
                     </FormControl>
@@ -162,21 +142,12 @@ export default function Signup() {
                   </FormItem>
                 )}
               />
-              <Button type="submit" className="w-full">
-                {t("continue")}
+              <Button className="w-full" type="submit">
+                {t("save")}
               </Button>
             </form>
           </Form>
         </CardContent>
-        <CardFooter>
-          <p className="text-center w-full">
-            Already have an account?,{" "}
-            <Link to="/login" className="text-blue-600">
-              Login here
-            </Link>
-            .
-          </p>
-        </CardFooter>
       </Card>
     </main>
   );
